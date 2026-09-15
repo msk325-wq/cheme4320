@@ -27,21 +27,32 @@ def fig_capacity(path):
     ax1.axhline(0, color=INK, lw=1)
     ax1.plot(df["Crude fed (t/yr)"] / 1000, df["NPV ($M)"], color=ACCENT, lw=2.2)
     ax1.axvline(CRUDE_TPY / 1000, color=WARN, ls="--", lw=1.4)
-    ax1.annotate("client's own\ncrude: 10 kt/yr", xy=(10, -6), xytext=(11.5, -7.5),
+    ax1.annotate("client's own\ncrude: 10 kt/yr",
+                 xy=(10, df["NPV ($M)"].iloc[0]),
+                 xytext=(13, df["NPV ($M)"].iloc[0]),
                  color=WARN, fontsize=8)
 
     from scipy.optimize import brentq
     from .routes import aggregation_route
     from .model import economics
-    be = brentq(lambda c: economics(aggregation_route(c))["NPV_$"],
-                10000.0, 200000.0, xtol=1.0) / 1000
-    ax1.plot([be], [0], "o", color=INK, ms=7, zorder=5)
-    ax1.annotate(f"minimum economic\nscale: {be:.1f} kt/yr", xy=(be, 0),
-                 xytext=(be - 22, 8), fontsize=8, color=INK,
-                 arrowprops=dict(arrowstyle="->", color=INK, lw=1))
-    # The regional feedstock pool is the binding constraint, not the economics.
+    f_cap = lambda c: economics(aggregation_route(c))["NPV_$"]
+    lo_npv, hi_npv = f_cap(10000.0), f_cap(200000.0)
+    if lo_npv * hi_npv <= 0:
+        be = brentq(f_cap, 10000.0, 200000.0, xtol=1.0) / 1000
+        ax1.plot([be], [0], "o", color=INK, ms=7, zorder=5)
+        ax1.annotate(f"minimum economic\nscale: {be:.1f} kt/yr", xy=(be, 0),
+                     xytext=(be + 4, 4), fontsize=8, color=INK,
+                     arrowprops=dict(arrowstyle="->", color=INK, lw=1))
+        title = "Purification needs more crude than the region has"
+    else:
+        ax1.annotate(
+            "no minimum economic scale:\nNPV does not cross zero",
+            xy=(25, 0), fontsize=8, color=INK,
+        )
+        title = "On a liability basis, scale no longer decides the sign"
     ax1.axvline(42.0, color=ACCENT, ls=":", lw=1.5)
-    ax1.text(42.6, ax1.get_ylim()[0] * 0.55,
+    ylim = ax1.get_ylim()
+    ax1.text(42.6, ylim[0] * 0.15 + ylim[1] * 0.85,
              "entire PADD 1\ncrude pool: ~42 kt/yr", fontsize=8, color=ACCENT)
     ax1.fill_between(df["Crude fed (t/yr)"] / 1000, df["NPV ($M)"], 0,
                      where=df["NPV ($M)"] < 0, color=WARN, alpha=0.10)
@@ -49,8 +60,7 @@ def fig_capacity(path):
                      where=df["NPV ($M)"] >= 0, color=ACCENT, alpha=0.12)
     ax1.set_xlabel("Crude glycerol processed (thousand t/yr)")
     ax1.set_ylabel("NPV at 12% ($M)")
-    ax1.set_title("Purification needs more crude than the region has",
-                  loc="left", fontweight="bold")
+    ax1.set_title(title, loc="left", fontweight="bold")
 
     ax2.plot(df["Crude fed (t/yr)"] / 1000, df["Fixed opex ($/t crude)"],
              color=WARN, lw=2, label="Fixed opex")

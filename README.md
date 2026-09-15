@@ -6,15 +6,14 @@ plant. Task brief in `glycerol-roi-optimization-brief.md`; recommendation in
 
 ## Answer in one line
 
-Do not build. The recommendation is **A1 — keep selling crude glycerol as-is**.
-Minimum economic scale for glycerol purification is **54,645 t/yr of crude**,
-which is 5.5x the client's production and roughly 130% of the entire estimated
-PADD 1 crude glycerol pool, so even regional aggregation cannot reach it: a
-30,000 t/yr refinery returns NPV -$13.6M at IRR 5.1%. The one item worth
-pursuing is a $3.5M methanol-recovery and feed-spec project (E1) at NPV -$0.7M,
-IRR 7.8% — which turns positive on a $16/t move in a premium we could not
-source, and is therefore a commercial diligence question, not an engineering
-one.
+**On this branch the stream is a liability, not a byproduct.** The client
+already pays $2.0M/yr ($200/t) to dispose of 10,000 t/yr of crude glycerol, so
+the A1 hurdle is "keep paying the hauler" rather than "keep selling crude."
+Merchant crude is still +$400/t (the stranding is client-specific); every route
+that consumes the client's own crude is credited the avoided disposal cost.
+Working notes in `glycerol-negative-netback-basis-change.md`. The committed
+recommendation in `glycerol-route-recommendation.md` is the *previous* (positive
+netback) basis and has not been rewritten yet.
 
 ## Run it
 
@@ -46,6 +45,7 @@ economic function applied 22 times under identical conventions. `scipy.optimize`
 is used only for one-dimensional root finds (breakevens) and
 `numpy_financial` for NPV and IRR.
 
-Crude glycerol is charged to every route at its market netback, so route **A1
-(sell as-is) scores exactly zero margin by construction** and is the hurdle every
-other route must clear. A zero-feed-cost case is reported separately.
+Crude glycerol is charged to every route at its A1 netback, which on this branch
+is **negative** (derived as −1 × the invoiced disposal cost). Route **A1
+(dispose) still scores exactly zero margin by construction** and remains the
+hurdle. A case with the avoided-disposal credit removed is reported separately.

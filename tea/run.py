@@ -14,7 +14,7 @@ from .model import economics
 from .params import (
     PRICES, FIN, CRUDE_TPY, GLYCEROL_TPY, FEED_TPY, CEPCI_CURRENT,
     CEPCI_SOURCE, GLYCERINE_HISTORY, CENTS_LB_TO_USD_T, MACRS_NOTE,
-    CAPEX_ACCURACY, DISCOUNT_RATE_JUSTIFICATION,
+    CAPEX_ACCURACY, DISCOUNT_RATE_JUSTIFICATION, STRANDING_BARRIER,
 )
 from .routes import build_routes, aggregation_route
 
@@ -80,7 +80,9 @@ def pass2_table(results):
 
 TORNADO_VARS = [
     ("technical_glycerine", "Technical glycerine price"),
-    ("crude_glycerol", "Crude glycerol feed cost / netback"),
+    ("crude_disposal_cost", "Crude glycerol disposal cost (client invoice)"),
+    ("merchant_crude_glycerol", "Merchant crude (third-party purchase)"),
+    ("feed_grade_glycerin", "Feed-grade / de-methanolised product price"),
     ("natural_gas", "Natural gas (New York industrial)"),
     ("methanol", "Methanol credit"),
     ("operator_burdened", "Burdened labour rate"),
@@ -168,31 +170,45 @@ def breakevens(routes_by_code):
     for code in ["C1", "C2", "E1", "E3"]:
         r = routes_by_code[code]
         pk = r.product_price_key or "crude_glycerol"
-        solve("Product price for NPV = 0", r, pk, 200.0, 6000.0, "$/t")
-        solve("Crude glycerol feed cost for NPV = 0", r, "crude_glycerol",
-              0.0, 1200.0, "$/t crude",
-              "Below this feed cost the route beats simply selling the crude.")
+        solve("Product price for NPV = 0", r, pk, -400.0, 6000.0, "$/t")
+        solve("Disposal cost for NPV = 0", r, "crude_disposal_cost",
+              0.0, 800.0, "$/t crude",
+              "Above this disposal cost the route beats continuing to pay the "
+              "hauler. Coupled to the feed netback inside economics().")
         solve("Natural gas price for NPV = 0", r, "natural_gas",
               0.0, 60.0, "$/MMBtu")
 
-    # Capacity breakeven - the decisive one for this project.
+    # Capacity breakeven. On the positive-netback basis this was the decisive
+    # number (~54,600 t/yr). On a liability basis NPV is typically positive at
+    # the client's own 10,000 t/yr, so there is no root.
     def f_cap(cap):
         return economics(aggregation_route(cap))["NPV_$"]
-    try:
-        cap_star = brentq(f_cap, 10000.0, 200000.0, xtol=1.0)
+    lo_npv, hi_npv = f_cap(10000.0), f_cap(200000.0)
+    if lo_npv * hi_npv > 0:
         rows.append({
             "Route": "E3", "Variable": "MINIMUM ECONOMIC SCALE (NPV = 0)",
-            "Breakeven value": cap_star, "Unit": "t/yr crude glycerol fed",
+            "Breakeven value": np.nan, "Unit": "t/yr crude glycerol fed",
             "Base value": CRUDE_TPY,
-            "Note": f"The client has {CRUDE_TPY:,.0f} t/yr of its own crude. It "
-                    f"must source a further {cap_star - CRUDE_TPY:,.0f} t/yr "
-                    f"from third parties before a purification plant clears a "
-                    f"{FIN.discount_rate:.0%} hurdle.",
+            "Note": (
+                f"No sign change between 10,000 t/yr (NPV ${lo_npv/1e6:,.2f}M) "
+                f"and 200,000 t/yr (NPV ${hi_npv/1e6:,.2f}M). Minimum economic "
+                f"scale does not exist on this basis: the flowsheet does not "
+                f"cross zero from below."
+            ),
         })
-    except Exception as exc:
-        rows.append({"Route": "E3", "Variable": "Minimum economic scale",
-                     "Breakeven value": np.nan, "Unit": "t/yr",
-                     "Base value": CRUDE_TPY, "Note": str(exc)})
+    else:
+        try:
+            cap_star = brentq(f_cap, 10000.0, 200000.0, xtol=1.0)
+            rows.append({
+                "Route": "E3", "Variable": "MINIMUM ECONOMIC SCALE (NPV = 0)",
+                "Breakeven value": cap_star, "Unit": "t/yr crude glycerol fed",
+                "Base value": CRUDE_TPY,
+                "Note": f"The client has {CRUDE_TPY:,.0f} t/yr of its own crude.",
+            })
+        except Exception as exc:
+            rows.append({"Route": "E3", "Variable": "Minimum economic scale",
+                         "Breakeven value": np.nan, "Unit": "t/yr",
+                         "Base value": CRUDE_TPY, "Note": str(exc)})
 
     return pd.DataFrame(rows)
 
@@ -233,7 +249,7 @@ def grade_ladder(results_by_code):
         e = results_by_code[code]
         rows.append({
             "Grade": grade, "Code": code,
-            "Product price ($/t)": e["product_price_$_t"] or PRICES["crude_glycerol"].base,
+            "Product price ($/t)": e["product_price_$_t"] or PRICES["crude_disposal_cost"].base,
             "Margin ($/t crude fed)": e["margin_per_t_crude_$"],
             "TCI ($M)": e["TCI_$"] / 1e6,
             "NPV ($M)": e["NPV_$"] / 1e6,
@@ -353,6 +369,14 @@ def basis_table():
     rows = [{"Item": k, "Value": v, "Unit": "t/yr"} for k, v in FEED_TPY.items()]
     rows += [
         {"Item": "Total crude", "Value": CRUDE_TPY, "Unit": "t/yr"},
+        {"Item": "Stranding barrier", "Value": STRANDING_BARRIER,
+         "Unit": "methanol | quality | unresolved"},
+        {"Item": "Crude disposal cost (invoiced)",
+         "Value": PRICES["crude_disposal_cost"].base, "Unit": "$/t"},
+        {"Item": "Client crude netback",
+         "Value": PRICES["crude_glycerol"].base, "Unit": "$/t (negative)"},
+        {"Item": "Merchant crude (third-party)",
+         "Value": PRICES["merchant_crude_glycerol"].base, "Unit": "$/t"},
         {"Item": "Operating hours", "Value": 8000, "Unit": "h/yr"},
         {"Item": "CEPCI (current)", "Value": CEPCI_CURRENT, "Unit": "index"},
         {"Item": "CEPCI source", "Value": CEPCI_SOURCE, "Unit": ""},
@@ -397,6 +421,20 @@ def main():
     results = [economics(r) for r in routes]
     res_by_code = {e["code"]: e for e in results}
 
+    a1 = res_by_code["A1"]
+    disp = PRICES["crude_disposal_cost"].base
+    net = PRICES["crude_glycerol"].base
+    if abs(net + disp) > 1e-9:
+        raise RuntimeError(
+            f"A1 identity broken at the price register: netback {net} != "
+            f"-disposal {disp}. The Pass-2 comparator is meaningless if these drift."
+        )
+    if abs(a1["EBITDA_$"]) > 1.0 or abs(a1["NPV_$"]) > 1.0:
+        raise RuntimeError(
+            f"A1 is the hurdle and must score zero; got EBITDA ${a1['EBITDA_$']:,.0f}, "
+            f"NPV ${a1['NPV_$']:,.0f}."
+        )
+
     p1 = pass1_table(routes)
     p2 = pass2_table(results)
     sweep = capacity_sweep()
@@ -409,8 +447,8 @@ def main():
     # Zero-feed-cost sensitivity, required by Brief Section 6
     zero_feed = pd.DataFrame([{
         "Code": e["code"], "Route": e["name"],
-        "NPV, feed charged at market ($M)": e["NPV_$"] / 1e6,
-        "NPV, feed free ($M)":
+        "NPV, feed charged at netback ($M)": e["NPV_$"] / 1e6,
+        "NPV, avoided-disposal credit removed ($M)":
             economics(by_code[e["code"]], charge_feed=False)["NPV_$"] / 1e6,
     } for e in results if e["gates_passed"] or e["product_tpy"] > 0])
 

@@ -187,7 +187,14 @@ def economics(route: Route,
               charge_feed: Optional[bool] = None) -> dict:
     """Evaluate one route. Returns every intermediate, not just headlines."""
 
-    po = price_overrides or {}
+    po = dict(price_overrides or {})
+    # Keep the A1 identity: netback == -disposal_cost. A tornado or Monte Carlo
+    # draw that moves one without the other would make the baseline stop netting
+    # to zero, which silently breaks the Pass-2 comparator.
+    if "crude_disposal_cost" in po:
+        po["crude_glycerol"] = -po["crude_disposal_cost"]
+    elif "crude_glycerol" in po:
+        po["crude_disposal_cost"] = -po["crude_glycerol"]
     charge = route.charge_feed if charge_feed is None else charge_feed
 
     # ---- Revenue ----------------------------------------------------------
