@@ -86,9 +86,192 @@ GLYCERINE_HISTORY = [
     ("Argus Glycerine Issue 26-15", "2026-04-16", 77.5, 69.0, 18.0),
 ]
 
+
+# ----------------------------------------------------------------------------
+# GOING CONCERN: the client's crude glycerol is a liability, not a byproduct
+#
+# The client does not sell this stream. It pays $1.8-2.2M/yr to have it taken
+# away, against 10,000 t/yr of crude - a netback of -$180 to -$220/t. Every
+# route that consumes glycerol therefore earns an AVOIDED-COST CREDIT where it
+# previously paid an opportunity cost, a swing of roughly $6.0M/yr per route.
+#
+# The stranding is CLIENT-SPECIFIC: the merchant market for crude glycerol is
+# still positive (the Argus assessments below are unchanged and are retained
+# under `merchant_crude_glycerol`). Two consequences follow and both are wired
+# in explicitly, because conflating them with the client's own netback is what
+# makes a naive sign flip produce nonsense:
+#   - third-party crude must be BOUGHT at the merchant price, not collected as
+#     a gate fee (worth ~$12M/yr of EBITDA to route E3)
+#   - refined glycerine prices are unaffected, so the refined-to-crude spread
+#     is not a meaningful quantity on this basis
+# ----------------------------------------------------------------------------
+
+CRUDE_DISPOSAL_COST = Price(
+    base=200.0, low=180.0, high=220.0,
+    unit="$/t crude (a COST, entered positive)",
+    source="Client invoice: $1.8-2.2M/yr paid against the 10,000 t/yr crude "
+           "glycerol stream",
+    date="2026-09",
+    confidence="sourced",
+    note="THE BEST-SOURCED NUMBER IN THIS STUDY - a cost the client already "
+         "incurs, not a market assessment. Cross-check: at ~1.23 kg/L, "
+         "10,000 t/yr is ~2.15M gal, so $1.8-2.2M/yr is $0.84-1.02/gal, at or "
+         "above the top of the $0.25-1.00/gal band cited for trap grease under "
+         "'acid_oil_ffa' - for material that is NOT hazardous (confirmed with "
+         "the client: no RCRA D001 ignitability classification). TWO OPEN "
+         "ITEMS. (1) The disposal MECHANISM is unnamed - high-COD POTW "
+         "surcharge, incineration, fuel blending, long-haul licensed hauling or "
+         "an AD gate fee all reach this number but escalate differently. "
+         "(2) Crude glycerol is a valued anaerobic-digestion co-substrate, so "
+         "paying ~$1/gal to destroy it is anomalous; route B3 is NOT YET "
+         "MODELLED and it sets the ceiling on this cost. This is also a "
+         "CONTRACT, so its term and escalator govern when the avoided cost can "
+         "actually be booked - see FIN.avoided_cost_timing_note.",
+)
+
+
+def _netback_of(cost: Price, note: str) -> Price:
+    """The netback implied by a disposal cost, i.e. its negation.
+
+    Low and high swap under negation, so the numerically LOW bound is the
+    expensive-disposal case.
+
+    Derived rather than entered so the two can never drift apart. The baseline
+    route nets to exactly zero only while netback == -disposal_cost, and that
+    identity is what makes the Pass-2 comparator meaningful; run.py asserts it.
+    """
+    return Price(
+        base=-cost.base, low=-cost.high, high=-cost.low,
+        unit="$/t crude (NEGATIVE - this stream is a liability)",
+        source=cost.source, date=cost.date, confidence=cost.confidence, note=note,
+    )
+
+
+# ----------------------------------------------------------------------------
+# THE STRANDING BARRIER - the decisive unresolved unknown
+#
+# Client-specific stranding means something specific to THIS stream blocks
+# access to a merchant market that is otherwise positive. Which barrier it is
+# determines which route removes it, and the candidates are ~$12M of NPV apart:
+#
+#   "methanol"    9 wt% methanol (90,000 ppm against the 5,000 ppm AAFCO feed
+#                 limit) is the blocker, so a ~$3.5M stripping column restores
+#                 market access and routes E1/F1 dominate
+#   "quality"     ash, soaps and MONG are the blocker, so only full purification
+#                 (~$22M, route C1) restores access and stripping achieves
+#                 nothing on its own
+#   "unresolved"  DEFAULT. Conservative: assume stripping does NOT restore
+#                 access. Equivalent to "quality" for pricing purposes.
+#
+# Resolvable with two assays (methanol and ash against the feed and refiner
+# specs) and one question to the hauler about where the material actually goes.
+#
+# The default deliberately does NOT credit the cheap routes, because the
+# client-specific branch was selected partly for producing favourable numbers
+# and the analysis should not compound that. The breakeven analysis in run.py is
+# what carries the argument for E1: it clears a 12% hurdle at any achieved price
+# above about -$115/t, which requires no feed market at all.
+# ----------------------------------------------------------------------------
+
+STRANDING_BARRIER = "unresolved"       # "methanol" | "quality" | "unresolved"
+_STRIPPING_RESTORES_ACCESS = STRANDING_BARRIER == "methanol"
+
+if STRANDING_BARRIER not in ("methanol", "quality", "unresolved"):
+    raise ValueError(f"Unknown STRANDING_BARRIER: {STRANDING_BARRIER!r}")
+
+_BARRIER_NOTE = (
+    f"SET BY STRANDING_BARRIER = '{STRANDING_BARRIER}'. "
+    + ("Methanol is assumed to be the binding barrier, so stripping it restores "
+       "market access and this price is the sourced feed/kosher-crude estimate."
+       if _STRIPPING_RESTORES_ACCESS else
+       "Stripping methanol is assumed NOT to restore market access, so the "
+       "de-methanolised material remains stranded and is valued at the disposal "
+       "netback. The HIGH bound carries the case where methanol was the barrier "
+       "after all. Flip STRANDING_BARRIER to 'methanol' to price that case.")
+)
+
+# The two prices that depend entirely on which barrier is binding. Built here
+# rather than inline so the conditional is visible instead of buried in a dict.
+if _STRIPPING_RESTORES_ACCESS:
+    _FEED_GRADE_GLYCERIN = Price(
+        base=525.0, low=350.0, high=683.0,
+        unit="$/t (80-88% basis, low methanol)",
+        source="Argus kosher crude 80% fob US Midwest 24-27 c/lb (2026-04-16); "
+               "Fastmarkets EN-GLY-0004 kosher crude 80% fob US plant 26-31 c/lb "
+               "(2026-07-28 corrected assessment)",
+        date="2026-07-28", confidence="estimate",
+        note="PARTLY INFERRED. The kosher-crude assessment is the closest traded "
+             "proxy for a clean, low-methanol, consistent-spec crude sold into "
+             "feed/food channels, but the kosher premium is a FEEDSTOCK-ORIGIN "
+             "premium, not a methanol-spec premium. The true feed-grade premium "
+             "for de-methanolised material is not separately assessed. "
+             + _BARRIER_NOTE,
+    )
+    _DEMETHANOLISED_CRUDE = Price(
+        base=400.0, low=176.0, high=630.0, unit="$/t crude (80% basis)",
+        source="Priced against merchant_crude_glycerol (Argus US Midwest crude "
+               "80% fob)",
+        date="2026-04-16", confidence="estimate",
+        note="Route F1's product: crude with the methanol removed but no quality "
+             "premium claimed, so it prices at the ordinary merchant assessment. "
+             "The F1-to-E1 difference then reads directly as the feed-spec "
+             "premium. " + _BARRIER_NOTE,
+    )
+else:
+    _FEED_GRADE_GLYCERIN = Price(
+        base=-CRUDE_DISPOSAL_COST.base, low=-CRUDE_DISPOSAL_COST.high, high=683.0,
+        unit="$/t (80-88% basis, low methanol) - STRANDED on this scenario",
+        source="Stranded: valued at the disposal netback. Upside bound is the "
+               "Argus/Fastmarkets kosher crude 80% fob assessment, 24-31 c/lb",
+        date="2026-07-28", confidence="placeholder",
+        note="CRITICAL AND UNRESOLVED - this single price decides between a "
+             "$3.5M project and a $22M one. " + _BARRIER_NOTE,
+    )
+    _DEMETHANOLISED_CRUDE = Price(
+        base=-CRUDE_DISPOSAL_COST.base, low=-CRUDE_DISPOSAL_COST.high, high=630.0,
+        unit="$/t crude (80% basis) - STRANDED on this scenario",
+        source="Stranded: valued at the disposal netback. Upside bound is the "
+               "Argus US Midwest crude 80% fob high",
+        date="2026-04-16", confidence="placeholder",
+        note="Route F1's product. " + _BARRIER_NOTE,
+    )
+
 PRICES = {
-    # --- Glycerine complex -------------------------------------------------
-    "crude_glycerol": Price(
+    # --- The client's own stream: a liability -------------------------------
+    "crude_disposal_cost": CRUDE_DISPOSAL_COST,
+
+    # `crude_glycerol` remains the key that model.py charges as the feed
+    # transfer price, so it keeps its name; it is now a NEGATIVE netback derived
+    # from the disposal cost. Every route consuming glycerol picks up a
+    # +$2.0M/yr avoided cost through this line.
+    "crude_glycerol": _netback_of(
+        CRUDE_DISPOSAL_COST,
+        note="NETBACK ON THE CLIENT'S OWN CRUDE, derived as -1 x "
+             "crude_disposal_cost. Negative because the stream is stranded: the "
+             "client pays to move it. Charged to every route as the feed "
+             "transfer price, so route A1 (dispose) still scores EXACTLY zero "
+             "margin by construction and remains the hurdle - only the meaning "
+             "of that zero changes, from 'collect $4.0M/yr' to 'pay $2.0M/yr'. "
+             "Do NOT override this without also overriding crude_disposal_cost, "
+             "or the baseline stops netting to zero.",
+    ),
+
+    "crude_disposal_cost_downside": Price(
+        base=400.0, low=250.0, high=600.0,
+        unit="$/t crude (a COST, entered positive)",
+        source="Engineering estimate: doubling of the current invoiced rate",
+        date="2026-09",
+        confidence="estimate",
+        note="Downside bound carried by route A2. Reached if the current hauler "
+             "exits, the accepting facility re-profiles the waste, or a "
+             "solidification or COD-surcharge requirement is imposed. Bounds the "
+             "downside the way the old A2 (disposal at a positive crude market) "
+             "used to; on this basis disposal IS the baseline, so the only "
+             "meaningful downside is that it gets dearer.",
+    ),
+
+    # --- Glycerine complex, for everyone who is NOT stranded ----------------
+    "merchant_crude_glycerol": Price(
         base=400.0, low=176.0, high=630.0, unit="$/t crude (80% basis)",
         source="Argus Glycerine, US Midwest crude 80% fob, four dated assessments "
                "2022-01-06 / ~2024-01 / 2025-10-01 / 2026-04-16 (17-19 c/lb latest)",
@@ -96,8 +279,26 @@ PRICES = {
         confidence="sourced",
         note="Base is the approximate median of four dated observations (~18 c/lb). "
              "Low is the Jan-2024 trough (8 c/lb); high is the Jan-2022 peak "
-             "(28.5 c/lb). Current spot (Apr 2026) is 17-19 c/lb = $375-419/t, "
-             "i.e. near the LOW end even as refined sits near its high.",
+             "(28.5 c/lb). UNCHANGED from the positive-netback basis, and still "
+             "the right price for THIRD-PARTY crude: under client-specific "
+             "stranding the client's neighbours are not stranded, so E3 must BUY "
+             "their crude at the assessment rather than be paid to take it. "
+             "Conflating this with the client's own netback overstates E3 by "
+             "~$12M/yr of EBITDA.",
+    ),
+    "second_cut_glycerine": Price(
+        base=400.0, low=-220.0, high=630.0, unit="$/t (85-90% glycerine)",
+        source="Priced against merchant_crude_glycerol (Argus US Midwest crude "
+               "80% fob) as the nearest traded analogue",
+        date="2026-04-16",
+        confidence="estimate",
+        note="The 3% second cut off the Lurgi yield block. Its own key because it "
+             "is NOT the client's stranded crude: it is salt-free, "
+             "methanol-free and 85-90% pure, so it is assumed saleable at the "
+             "merchant crude assessment even while the raw 80% crude is not. The "
+             "low bound carries the case where it is stranded too and becomes a "
+             "disposal liability at the same rate as the feed. Immaterial either "
+             "way: ~276 t/yr, under $0.2M of swing.",
     ),
     "technical_glycerine": Price(
         base=1250.0, low=772.0, high=2271.0, unit="$/t (99.5%)",
@@ -120,20 +321,8 @@ PRICES = {
              "tallow/UCO rather than vegetable, the applicable assessment is USP "
              "tallow, which runs 3-6 c/lb BELOW USP vegetable.",
     ),
-    "feed_grade_glycerin": Price(
-        base=525.0, low=350.0, high=683.0, unit="$/t (80-88% basis, low methanol)",
-        source="Argus kosher crude 80% fob US Midwest 24-27 c/lb (2026-04-16); "
-               "Fastmarkets EN-GLY-0004 kosher crude 80% fob US plant 26-31 c/lb "
-               "(2026-07-28 corrected assessment)",
-        date="2026-07-28",
-        confidence="estimate",
-        note="PARTLY INFERRED. The kosher-crude assessment is the closest traded "
-             "proxy for a clean, low-methanol, consistent-spec crude sold into "
-             "feed/food channels, but the kosher premium is a FEEDSTOCK-ORIGIN "
-             "premium, not a methanol-spec premium. The true feed-grade premium for "
-             "de-methanolised material is not separately assessed. Treat the "
-             "premium over plain crude as the key uncertainty in route E1.",
-    ),
+    "feed_grade_glycerin": _FEED_GRADE_GLYCERIN,
+    "demethanolised_crude": _DEMETHANOLISED_CRUDE,
 
     # --- Co-products and credits -------------------------------------------
     "methanol": Price(
@@ -488,10 +677,26 @@ class Financials:
     owners_cost_frac: float = 0.08
 
     feed_transfer_price_convention: str = (
-        "Crude glycerol is charged to every route at its A1 market netback "
-        "(PRICES['crude_glycerol']). Route A1 therefore has zero margin BY "
-        "CONSTRUCTION and is the explicit hurdle. A zero-feed-cost sensitivity "
-        "is reported separately."
+        "Crude glycerol is charged to every route at its A1 netback "
+        "(PRICES['crude_glycerol']). That netback is now NEGATIVE, so the charge "
+        "is a CREDIT: every route that consumes glycerol is credited the "
+        "disposal cost it avoids. Route A1 (dispose) therefore still has zero "
+        "margin BY CONSTRUCTION and is still the explicit hurdle - the "
+        "convention is invariant to the sign of the feed value, only the meaning "
+        "of the zero changes. A zero-feed-cost sensitivity is reported "
+        "separately; on this basis it removes the avoided-cost credit and is "
+        "therefore a DOWNSIDE case rather than an upside one."
+    )
+
+    avoided_cost_timing_note: str = (
+        "NOT YET MODELLED. The $2M/yr disposal cost is a hauling CONTRACT, so a "
+        "term or volume commitment may prevent the avoided cost being booked "
+        "from day one. This model applies a flat annual EBITDA and its only "
+        "time-varying hook is Route.revenue_ramp, which scales product revenue "
+        "only. Deferring the avoided cost through five operating years is worth "
+        "about -$4.8M of NPV at 12% after tax: survivable for E1, roughly a "
+        "third of C1 and E3. Obtain the contract term, escalator and "
+        "termination rights, then add an avoided-cost ramp."
     )
 
 
@@ -506,6 +711,14 @@ DISCOUNT_RATE_JUSTIFICATION = """
     so project risk and feedstock risk are CORRELATED rather than independent.
   - 10-12% is the range the brief proposes; 12% is taken as the base and 10% is
     carried in the sensitivity.
+
+CAVEAT ON THE NEGATIVE-NETBACK BASIS: the first bullet no longer applies
+uniformly. A large share of every route's value is now AVOIDED CONTRACTUAL COST,
+which carries none of the glycerine spread exposure that justifies 12%. E1's
+case is avoided disposal plus a local feed sale; C1's is still the spread. So the
+cheap route is now also the LOW-RISK route. Applying 12% throughout is
+deliberately conservative rather than correct, and that is stated rather than
+left implicit.
 """
 
 # MACRS GDS percentages (half-year convention)

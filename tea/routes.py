@@ -275,8 +275,11 @@ def purification_streams(product_tpy, second_cut_tpy, scale=1.0):
                    FFA_FROM_SOAP * 0.90 * scale, "acid_oil_ffa",
                    f"{SOAP_TPY:.0f} t soap -> {FFA_FROM_SOAP:.0f} t FFA x 90%"),
             Stream("Second-cut glycerine (85-90%) sold as crude",
-                   second_cut_tpy, "crude_glycerol",
-                   "3% of glycerol per the Lurgi yield block"),
+                   second_cut_tpy, "second_cut_glycerine",
+                   "3% of glycerol per the Lurgi yield block. Priced on its own "
+                   "key, NOT the client's stranded netback: it is salt-free and "
+                   "methanol-free, so it is assumed saleable even while the raw "
+                   "80% crude is not."),
         ],
         purchased=[
             Stream("Sulphuric acid (93%)", H2SO4_TPY * scale, "sulfuric_acid",
@@ -307,7 +310,7 @@ def purification_streams(product_tpy, second_cut_tpy, scale=1.0):
 
 def aggregation_route(crude_tpy, code="E3"):
     """Technical-grade purification sized for the client's own crude PLUS
-    third-party crude bought in at the same assessed price.
+    third-party crude bought at the merchant assessment.
 
     This is the variant the brief invites in Section 2: it attacks the scale
     problem instead of accepting it. Tripling throughput multiplies ISBL by
@@ -316,12 +319,19 @@ def aggregation_route(crude_tpy, code="E3"):
     3x the crude, fixed cost per tonne of crude fed falls 40%, from $314/t to
     $187/t, and that reduction is the whole of the improvement.
 
-    It is not enough. With inbound freight charged on bought-in crude - which
-    is unavoidable, since crude glycerine is assessed FOB - the capacity at
-    which this flowsheet reaches NPV = 0 is about 54,600 t/yr, which is ~130%
-    of the entire estimated PADD 1 crude glycerol pool. Aggregation therefore
-    fails on FEEDSTOCK AVAILABILITY, not on economics: the economics work, but
-    only at a scale the region cannot supply.
+    ON THE NEGATIVE-NETBACK BASIS the old conclusion inverts and then largely
+    evaporates. Minimum economic scale no longer exists: the flowsheet clears the
+    hurdle at the client's own 10,000 t/yr, so there is no capacity at which NPV
+    crosses zero from below, and run.py now reports that instead of a root.
+
+    But aggregation also stops being worth much, for a reason specific to this
+    basis. The avoided disposal cost attaches ONLY to the client's own 10,000
+    t/yr. Every third-party tonne must be bought at the merchant assessment and
+    hauled in, costing ~$480/t delivered where the client's own tonnes PAY $200/t
+    to be taken away - a $680/t swing against each incremental tonne. Scale still
+    cuts fixed cost per tonne exactly as before, but it now dilutes the
+    avoided-cost credit that is the entire source of the improvement. Check the
+    capacity sweep before repeating any of the old scale argument in the report.
     """
     scale = crude_tpy / CRUDE_TPY
     third_party = max(0.0, crude_tpy - CRUDE_TPY)
@@ -332,9 +342,13 @@ def aggregation_route(crude_tpy, code="E3"):
     streams = purification_streams(product, second_cut, scale=scale)
     streams["purchased"] = [
         Stream("Third-party crude glycerol purchased", third_party,
-               "crude_glycerol",
-               f"{third_party:,.0f} t/yr bought in at the SAME Argus assessment "
-               f"used for the internal transfer price - no discount assumed"),
+               "merchant_crude_glycerol",
+               f"{third_party:,.0f} t/yr BOUGHT at the Argus merchant assessment, "
+               f"no discount assumed. Deliberately NOT priced at the client's own "
+               f"negative netback: the stranding is client-specific, so the "
+               f"neighbours still have a market and will not pay a gate fee. "
+               f"Pricing this line at the client's netback would credit E3 a "
+               f"phantom ~$12M/yr."),
         # Omitted in the first pass and it should not have been. Crude glycerol
         # is assessed FOB, so the buyer carries the freight, and the further
         # the gathering radius extends the more of it there is. This is the
@@ -393,36 +407,47 @@ def build_routes():
     # ---- A. Baseline / no-build -------------------------------------------
     routes.append(Route(
         code="A1",
-        name="Sell crude glycerol as-is to a merchant refiner",
+        name="Continue paying for disposal (do nothing)",
         category="A. Baseline",
         description=(
-            "The null hypothesis. Load 10,000 t/yr of 80% crude into trucks or "
-            "rail at the gate and sell on the Argus fob US Midwest crude "
-            "assessment. Zero capex, zero incremental operating cost. Because "
-            "every other route is charged the same price as an internal "
-            "transfer, this route scores EXACTLY zero margin per tonne by "
-            "construction, and that zero is the hurdle."
+            "The null hypothesis on this basis, and what the client does today: "
+            "hand 10,000 t/yr of stranded 80% crude to a licensed hauler at "
+            "$200/t. Zero capex, zero incremental operating cost, $2.0M/yr of "
+            "cash out. The disposal cost appears as a purchased line and the "
+            "feed transfer credit offsets it exactly, so this route scores "
+            "EXACTLY zero margin per tonne by construction and that zero is the "
+            "hurdle every other route must clear. The hurdle mechanism is "
+            "unchanged from the positive-netback basis; only the meaning of the "
+            "zero changes, from 'collect $4.0M/yr' to 'pay $2.0M/yr'."
         ),
         glycerol_fed_tpy=GLYCEROL_TPY,
         glycerol_conversion=0.0,
-        product_name="(none - feed sold directly)",
+        product_name="(none - stream disposed of)",
         product_price_key="",
         freight_applies=False,
         charge_feed=True,
-        credits=[Stream("Crude glycerol sold fob plant", CRUDE_TPY,
-                        "crude_glycerol", "10,000 t/yr as-is, no processing")],
+        # Expressed as a cost rather than a negative credit so the workbook does
+        # not report negative revenue. It cancels the feed transfer credit
+        # because crude_glycerol is derived as -crude_disposal_cost.
+        purchased=[Stream("Crude glycerol disposal, as invoiced today", CRUDE_TPY,
+                          "crude_disposal_cost",
+                          "10,000 t/yr at the invoiced $200/t; $2.0M/yr")],
         operators_per_shift=0.0,
     ))
 
     routes.append(Route(
         code="A2",
-        name="Pay for disposal / anaerobic digestion offtake",
+        name="Disposal cost escalates (downside bound)",
         category="A. Baseline",
         description=(
-            "Downside case. If crude glycerol markets go negative - which they "
-            "did in 2007-08 and again briefly in the 2023-24 oversupply - the "
-            "producer pays to move the stream. Carried to bound the downside, "
-            "not as a recommendation."
+            "Downside case, restated for this basis. On the positive-netback "
+            "basis A2 was 'the crude market goes negative'; that has now "
+            "happened and IS the baseline, so the only meaningful downside left "
+            "is that disposal gets dearer. Doubling the invoiced rate to $400/t "
+            "costs a further $2.0M/yr against A1. Reached if the current hauler "
+            "exits, the accepting facility re-profiles the waste, or a "
+            "solidification or COD-surcharge requirement is imposed. Carried to "
+            "bound the downside, not as an option the client can choose."
         ),
         glycerol_fed_tpy=GLYCEROL_TPY,
         glycerol_conversion=0.0,
@@ -430,13 +455,13 @@ def build_routes():
         product_price_key="",
         freight_applies=False,
         charge_feed=True,
-        purchased=[Stream("Disposal / AD offtake gate fee", CRUDE_TPY,
-                          "solid_waste_disposal", "10,000 t/yr at the "
-                          "non-hazardous liquid waste gate fee")],
+        purchased=[Stream("Crude glycerol disposal at the escalated rate",
+                          CRUDE_TPY, "crude_disposal_cost_downside",
+                          "10,000 t/yr at $400/t, double the invoiced rate")],
         operators_per_shift=0.0,
         gate_scale_fit="fail",
-        gate_note="Value-destroying by inspection whenever the crude market is "
-                  "positive. Retained only as the downside bound.",
+        gate_note="Not a choice - a risk. Retained only as the downside bound on "
+                  "the baseline itself.",
     ))
 
     # ---- B. Energy / internal use -----------------------------------------
@@ -778,8 +803,10 @@ def build_routes():
         freight_applies=False,
         credits=[
             Stream("De-methanolised crude sold at the ordinary crude price",
-                   e1_product, "crude_glycerol",
-                   "10,000 t/yr less 855 t/yr methanol removed"),
+                   e1_product, "demethanolised_crude",
+                   "10,000 t/yr less 855 t/yr methanol removed. Priced on its "
+                   "own key because whether stripping restores market access is "
+                   "exactly the open question - see params.STRANDING_BARRIER."),
             Stream("Methanol recovered", METHANOL_RECOVERED_TPY, "methanol",
                    f"900 t/yr x {METHANOL_RECOVERY:.0%}"),
         ],

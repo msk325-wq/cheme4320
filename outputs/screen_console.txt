@@ -2,8 +2,8 @@
 PASS 1 - GATES
 ====================================================================================================
 Code                                                      Route Result                 Failed gate(s)
-  A1            Sell crude glycerol as-is to a merchant refiner   PASS                               
-  A2             Pay for disposal / anaerobic digestion offtake   FAIL                      scale fit
+  A1                  Continue paying for disposal (do nothing)   PASS                               
+  A2                   Disposal cost escalates (downside bound)   FAIL                      scale fit
   B1           Combust for process steam at the biodiesel plant   PASS                               
   C1                          Purify to technical grade (99.5%)   PASS                               
   C2                             Purify to USP/EP grade (99.7%)   PASS                               
@@ -29,17 +29,17 @@ Code                                                      Route Result          
 PASS 2 - COARSE ECONOMICS, RANKED BY MARGIN PER TONNE OF CRUDE FED
 ====================================================================================================
 Code                                                      Route Gate  Crude fed (t/yr)  Product (t/yr)  EBITDA ($M)  MARGIN $/t crude fed  TCI ($M)  NPV @12% ($M)   IRR
-  C2                             Purify to USP/EP grade (99.7%) PASS         10,000.00        7,162.16         1.75                175.12     25.97         -17.01 -0.02
-  E3          Regional aggregation refinery (30,000 t/yr crude) PASS         30,000.00       21,747.14         4.60                153.24     42.04         -13.59  0.05
-  C1                          Purify to technical grade (99.5%) PASS         10,000.00        7,249.05         0.80                 79.90     21.75         -15.45 -0.05
-  E1                        De-methanolised feed-grade glycerin PASS         10,000.00        9,145.00         0.47                 46.54      3.51          -0.72  0.08
-  A1            Sell crude glycerol as-is to a merchant refiner PASS         10,000.00            0.00         0.00                  0.00      0.00           0.00   NaN
-  E2                 De-icer / dust suppressant blend component FAIL         10,000.00        9,145.00        -0.33                -33.37      0.00          -2.03   NaN
-  F1         Methanol recovery only (return to biodiesel plant) PASS         10,000.00            0.00        -0.60                -59.77      3.51          -6.83   NaN
-  C3 Membrane / ion-exchange-led purification (no distillation) FAIL         10,000.00        7,343.98        -2.24               -224.39      0.00         -13.65   NaN
-  B1           Combust for process steam at the biodiesel plant PASS         10,000.00            0.00        -2.89               -289.05      8.35         -25.18   NaN
-  A2             Pay for disposal / anaerobic digestion offtake FAIL         10,000.00            0.00        -4.80               -480.00      0.00         -29.19   NaN
-  D1                        Propylene glycol via hydrogenolysis FAIL         10,000.00        4,043.49        -4.94               -493.51     31.12         -58.35   NaN
+  C2                             Purify to USP/EP grade (99.7%) PASS         10,000.00        7,162.16         7.75                775.12     25.97          12.75  0.20
+  C1                          Purify to technical grade (99.5%) PASS         10,000.00        7,249.05         6.80                679.90     21.75          14.06  0.23
+  E3          Regional aggregation refinery (30,000 t/yr crude) PASS         30,000.00       21,747.14        10.60                353.24     42.04          15.51  0.19
+  B1           Combust for process steam at the biodiesel plant PASS         10,000.00            0.00         3.11                310.95      8.35           7.64  0.28
+  D1                        Propylene glycol via hydrogenolysis FAIL         10,000.00        4,043.49         1.06                106.49     31.12         -22.53 -0.06
+  A1                  Continue paying for disposal (do nothing) PASS         10,000.00            0.00         0.00                  0.00      0.00           0.00   NaN
+  F1         Methanol recovery only (return to biodiesel plant) PASS         10,000.00            0.00        -0.08                 -8.47      3.51          -3.71 -0.23
+  E1                        De-methanolised feed-grade glycerin PASS         10,000.00        9,145.00        -0.16                -16.47      3.51          -4.19 -0.39
+  E2                 De-icer / dust suppressant blend component FAIL         10,000.00        9,145.00        -0.96                -96.38      0.00          -5.86   NaN
+  C3 Membrane / ion-exchange-led purification (no distillation) FAIL         10,000.00        7,343.98        -1.57               -156.83      0.00          -9.54   NaN
+  A2                   Disposal cost escalates (downside bound) FAIL         10,000.00            0.00        -2.00               -200.00      0.00         -12.16   NaN
   D2                1,3-propanediol (fermentation or catalytic) FAIL         10,000.00             NaN          NaN                   NaN       NaN            NaN   NaN
   D3      Epichlorohydrin via hydrochlorination (Epicerol-type) FAIL         10,000.00             NaN          NaN                   NaN       NaN            NaN   NaN
   D4          Acrolein / acrylic acid via dehydration-oxidation FAIL         10,000.00             NaN          NaN                   NaN       NaN            NaN   NaN
@@ -55,89 +55,91 @@ Code                                                      Route Gate  Crude fed 
 ====================================================================================================
 CAPACITY SWEEP - the decisive analysis
 ====================================================================================================
- Crude fed (t/yr)  Third-party crude required (t/yr)  TCI ($M)  Unit capex ($/annual t crude)  Fixed opex ($/t crude)  Margin ($/t crude)  NPV ($M)   IRR
-            10000                               0.00     21.75                       2,174.74                  313.86               79.90    -15.45 -0.05
-            15000                           5,000.00     27.74                       1,849.14                  271.15               95.95    -17.41 -0.03
-            20000                          10,000.00     32.96                       1,648.14                  232.13              121.63    -16.84  0.01
-            25000                          15,000.00     37.69                       1,507.41                  206.10              139.66    -15.46  0.03
-            30000                          20,000.00     42.04                       1,401.39                  187.19              153.24    -13.59  0.05
-            35000                          25,000.00     46.12                       1,317.59                  172.67              163.95    -11.39  0.07
-            40000                          30,000.00     49.96                       1,249.06                  161.08              172.68     -8.85  0.08
-            45000                          35,000.00     53.62                       1,191.58                  151.56              179.97     -6.03  0.10
-            50000                          40,000.00     57.12                       1,142.40                  143.56              186.20     -2.97  0.11
-            55000                          45,000.00     60.48                       1,099.67                  136.72              191.58      0.23  0.12
-            60000                          50,000.00     63.72                       1,062.05                  130.78              196.31      3.43  0.13
-            65000                          55,000.00     66.86                       1,028.59                  125.57              200.50      6.76  0.14
-            70000                          60,000.00     69.90                         998.55                  120.94              204.25     10.22  0.15
-            75000                          65,000.00     72.85                         971.37                  116.80              207.63     13.79  0.16
-            80000                          70,000.00     75.73                         946.61                  113.06              210.70     17.47  0.16
-            85000                          75,000.00     78.53                         923.93                  109.67              213.50     21.24  0.17
-            90000                          80,000.00     81.27                         903.05                  106.57              216.08     25.10  0.18
+ Crude fed (t/yr)  Third-party crude required (t/yr)  TCI ($M)  Unit capex ($/annual t crude)  Fixed opex ($/t crude)  Margin ($/t crude)  NPV ($M)  IRR
+            10000                               0.00     21.75                       2,174.74                  313.86              679.90     14.06 0.23
+            15000                           5,000.00     27.74                       1,849.14                  271.15              495.95     12.33 0.20
+            20000                          10,000.00     32.96                       1,648.14                  232.13              421.63     12.74 0.19
+            25000                          15,000.00     37.69                       1,507.41                  206.10              379.66     13.86 0.19
+            30000                          20,000.00     42.04                       1,401.39                  187.19              353.24     15.51 0.19
+            35000                          25,000.00     46.12                       1,317.59                  172.67              335.38     17.54 0.19
+            40000                          30,000.00     49.96                       1,249.06                  161.08              322.68     19.89 0.19
+            45000                          35,000.00     53.62                       1,191.58                  151.56              313.31     22.51 0.20
+            50000                          40,000.00     57.12                       1,142.40                  143.56              306.20     25.34 0.20
+            55000                          45,000.00     60.48                       1,099.67                  136.72              300.67     28.36 0.21
+            60000                          50,000.00     63.72                       1,062.05                  130.78              296.31     31.54 0.21
+            65000                          55,000.00     66.86                       1,028.59                  125.57              292.81     34.82 0.21
+            70000                          60,000.00     69.90                         998.55                  120.94              289.96     38.21 0.22
+            75000                          65,000.00     72.85                         971.37                  116.80              287.63     41.70 0.22
+            80000                          70,000.00     75.73                         946.61                  113.06              285.70     45.29 0.23
+            85000                          75,000.00     78.53                         923.93                  109.67              284.09     48.97 0.23
+            90000                          80,000.00     81.27                         903.05                  106.57              282.74     52.73 0.23
 
 ====================================================================================================
 BREAKEVENS
 ====================================================================================================
-Route                             Variable  Breakeven value                    Unit  Base value                                                                                                                                                  Note
-   C1            Product price for NPV = 0          1,660.1                     $/t     1,250.0                                                                                                                                                      
-   C1 Crude glycerol feed cost for NPV = 0             94.3               $/t crude       400.0                                                                                        Below this feed cost the route beats simply selling the crude.
-   C1        Natural gas price for NPV = 0              NaN                 $/MMBtu        13.0                                                   No sign change in the searched interval - NPV does not reach zero anywhere in the plausible range. 
-   C2            Product price for NPV = 0          2,024.1                     $/t     1,530.0                                                                                                                                                      
-   C2 Crude glycerol feed cost for NPV = 0             56.6               $/t crude       400.0                                                                                        Below this feed cost the route beats simply selling the crude.
-   C2        Natural gas price for NPV = 0              NaN                 $/MMBtu        13.0                                                   No sign change in the searched interval - NPV does not reach zero anywhere in the plausible range. 
-   E1            Product price for NPV = 0            540.6                     $/t       525.0                                                                                                                                                      
-   E1 Crude glycerol feed cost for NPV = 0            385.7               $/t crude       400.0                                                                                        Below this feed cost the route beats simply selling the crude.
-   E1        Natural gas price for NPV = 0              NaN                 $/MMBtu        13.0                                                   No sign change in the searched interval - NPV does not reach zero anywhere in the plausible range. 
-   E3            Product price for NPV = 0          1,373.9                     $/t     1,250.0                                                                                                                                                      
-   E3 Crude glycerol feed cost for NPV = 0            307.6               $/t crude       400.0                                                                                        Below this feed cost the route beats simply selling the crude.
-   E3        Natural gas price for NPV = 0              3.7                 $/MMBtu        13.0                                                                                                                                                      
-   E3     MINIMUM ECONOMIC SCALE (NPV = 0)         54,645.2 t/yr crude glycerol fed    10,000.0 The client has 10,000 t/yr of its own crude. It must source a further 44,645 t/yr from third parties before a purification plant clears a 12% hurdle.
+Route                         Variable  Breakeven value                    Unit  Base value                                                                                                                                                                                                                      Note
+   C1        Product price for NPV = 0            832.4                     $/t     1,250.0                                                                                                                                                                                                                          
+   C1        Disposal cost for NPV = 0              NaN               $/t crude       200.0 No sign change in the searched interval - NPV does not reach zero anywhere in the plausible range. Above this disposal cost the route beats continuing to pay the hauler. Coupled to the feed netback inside economics().
+   C1    Natural gas price for NPV = 0             44.2                 $/MMBtu        13.0                                                                                                                                                                                                                          
+   C2        Product price for NPV = 0          1,136.3                     $/t     1,530.0                                                                                                                                                                                                                          
+   C2        Disposal cost for NPV = 0              NaN               $/t crude       200.0 No sign change in the searched interval - NPV does not reach zero anywhere in the plausible range. Above this disposal cost the route beats continuing to pay the hauler. Coupled to the feed netback inside economics().
+   C2    Natural gas price for NPV = 0             40.7                 $/MMBtu        13.0                                                                                                                                                                                                                          
+   E1        Product price for NPV = 0           -115.5                     $/t      -200.0                                                                                                                                                                                                                          
+   E1        Disposal cost for NPV = 0            277.3               $/t crude       200.0                                                                                                    Above this disposal cost the route beats continuing to pay the hauler. Coupled to the feed netback inside economics().
+   E1    Natural gas price for NPV = 0              NaN                 $/MMBtu        13.0                                                                                                                       No sign change in the searched interval - NPV does not reach zero anywhere in the plausible range. 
+   E3        Product price for NPV = 0          1,098.0                     $/t     1,250.0                                                                                                                                                                                                                          
+   E3        Disposal cost for NPV = 0              NaN               $/t crude       200.0 No sign change in the searched interval - NPV does not reach zero anywhere in the plausible range. Above this disposal cost the route beats continuing to pay the hauler. Coupled to the feed netback inside economics().
+   E3    Natural gas price for NPV = 0             24.4                 $/MMBtu        13.0                                                                                                                                                                                                                          
+   E3 MINIMUM ECONOMIC SCALE (NPV = 0)              NaN t/yr crude glycerol fed    10,000.0                                      No sign change between 10,000 t/yr (NPV $14.06M) and 200,000 t/yr (NPV $148.52M). Minimum economic scale does not exist on this basis: the flowsheet does not cross zero from below.
 
 ====================================================================================================
 GRADE LADDER (Trap 6)
 ====================================================================================================
              Grade Code  Product price ($/t)  Margin ($/t crude fed)  TCI ($M)  NPV ($M)   IRR
-        Crude, 80%   A1               400.00                    0.00      0.00      0.00   NaN
-Feed grade, ~87.5%   E1               525.00                   46.54      3.51     -0.72  0.08
-  Technical, 99.5%   C1             1,250.00                   79.90     21.75    -15.45 -0.05
-     USP/EP, 99.7%   C2             1,530.00                  175.12     25.97    -17.01 -0.02
+        Crude, 80%   A1               200.00                    0.00      0.00      0.00   NaN
+Feed grade, ~87.5%   E1              -200.00                  -16.47      3.51     -4.19 -0.39
+  Technical, 99.5%   C1             1,250.00                  679.90     21.75     14.06  0.23
+     USP/EP, 99.7%   C2             1,530.00                  775.12     25.97     12.75  0.20
 
 ====================================================================================================
 TORNADO - recommended route
 ====================================================================================================
-                                               Variable  Low value  Base value  High value  NPV at low ($M)  NPV at high ($M)  Swing ($M) Confidence
-                              Technical glycerine price     772.00    1,250.00    2,271.00           -73.54             88.65      162.19    sourced
-                     Crude glycerol feed cost / netback     176.00      400.00      630.00            18.01            -51.13       69.14    sourced
-               Capex accuracy (AACE Class 4, -30%/+50%)       0.70        1.00        1.50             2.06            -40.93       42.98   estimate
-Freight, outbound product and inbound third-party crude      50.00       80.00      180.00            -7.26            -35.98       28.72   estimate
-                      Natural gas (New York industrial)       8.00       13.00       16.50            -6.23            -18.94       12.70    sourced
-                                        Methanol credit     450.00      600.00    1,414.00           -15.55             -3.03       12.52   estimate
-                 Glycerol recovery -5 percentage points       0.86        0.90        0.90           -20.29            -13.59        6.69   estimate
-                                   Burdened labour rate  85,000.00  105,000.00  145,000.00           -11.45            -18.01        6.56   estimate
-                                  Recovered FAME credit   1,000.00    1,400.00    1,700.00           -15.23            -12.37        2.87   estimate
-                Split soap fatty acid (acid oil) credit     600.00      900.00    1,200.00           -14.16            -13.02        1.14   estimate
-                                         Sulphuric acid     300.00      875.00      950.00           -12.80            -13.70        0.90    sourced
-                                       Activated carbon     800.00    1,800.00    2,500.00           -13.15            -13.91        0.76   estimate
-                         Salt cake and residue disposal      55.00       80.00      110.00           -13.30            -13.94        0.64   estimate
-                                            Electricity       0.09        0.10        0.13           -13.52            -13.79        0.28    sourced
-                                           Caustic soda     460.00      740.00      900.00           -13.55            -13.62        0.07    sourced
+                                               Variable  Low value  Base value  High value  NPV at low ($M)  NPV at high ($M)  Swing ($M)  Confidence
+                              Technical glycerine price     772.00    1,250.00    2,271.00           -37.18            115.65      152.83     sourced
+                  Merchant crude (third-party purchase)     176.00      400.00      630.00            35.89             -6.51       42.40     sourced
+               Capex accuracy (AACE Class 4, -30%/+50%)       0.70        1.00        1.50            29.56             -9.62       39.19    estimate
+Freight, outbound product and inbound third-party crude      50.00       80.00      180.00            21.37             -4.36       25.73    estimate
+                      Natural gas (New York industrial)       8.00       13.00       16.50            22.28             10.73       11.55     sourced
+                                        Methanol credit     450.00      600.00    1,414.00            13.70             25.13       11.42    estimate
+                 Glycerol recovery -5 percentage points       0.86        0.90        0.90             9.54             15.51        5.96    estimate
+                                   Burdened labour rate  85,000.00  105,000.00  145,000.00            17.49             11.54        5.95    estimate
+                                  Recovered FAME credit   1,000.00    1,400.00    1,700.00            13.99             16.64        2.66    estimate
+          Crude glycerol disposal cost (client invoice)     180.00      200.00      220.00            14.57             16.44        1.87     sourced
+                Split soap fatty acid (acid oil) credit     600.00      900.00    1,200.00            14.98             16.03        1.06    estimate
+                                         Sulphuric acid     300.00      875.00      950.00            16.24             15.41        0.83     sourced
+                                       Activated carbon     800.00    1,800.00    2,500.00            15.92             15.21        0.71    estimate
+                         Salt cake and residue disposal      55.00       80.00      110.00            15.78             15.18        0.59    estimate
+                                            Electricity       0.09        0.10        0.13            15.58             15.32        0.26     sourced
+                                           Caustic soda     460.00      740.00      900.00            15.55             15.48        0.07     sourced
+             Feed-grade / de-methanolised product price    -220.00     -200.00      683.00            15.51             15.51        0.00 placeholder
 
 ====================================================================================================
 MONTE CARLO / ZERO-FEED-COST
 ====================================================================================================
                        Route  P(NPV > 0)  P10 NPV ($M)  Median NPV ($M)  P90 NPV ($M)
-E3 (30,000 t/yr aggregation)       0.471       -52.093           -3.114        48.715
-C1 (10,000 t/yr stand-alone)       0.221       -29.338          -11.671         7.138
+E3 (30,000 t/yr aggregation)       0.778       -15.585           25.111        74.722
+C1 (10,000 t/yr stand-alone)       0.957         4.048           17.291        33.500
 
-Code                                                      Route  NPV, feed charged at market ($M)  NPV, feed free ($M)
-  A1            Sell crude glycerol as-is to a merchant refiner                              0.00                18.00
-  B1           Combust for process steam at the biodiesel plant                            -25.18                -1.71
-  C1                          Purify to technical grade (99.5%)                            -15.45                 4.82
-  C2                             Purify to USP/EP grade (99.7%)                            -17.01                 3.23
-  C3 Membrane / ion-exchange-led purification (no distillation)                            -13.65                 7.90
-  D1                        Propylene glycol via hydrogenolysis                            -58.35               -34.03
-  E1                        De-methanolised feed-grade glycerin                             -0.72                17.43
-  E2                 De-icer / dust suppressant blend component                             -2.03                16.50
-  E3          Regional aggregation refinery (30,000 t/yr crude)                            -13.59                 6.13
-  F1         Methanol recovery only (return to biodiesel plant)                             -6.83                12.65
+Code                                                      Route  NPV, feed charged at netback ($M)  NPV, avoided-disposal credit removed ($M)
+  A1                  Continue paying for disposal (do nothing)                               0.00                                     -12.16
+  B1           Combust for process steam at the biodiesel plant                               7.64                                      -1.71
+  C1                          Purify to technical grade (99.5%)                              14.06                                       4.82
+  C2                             Purify to USP/EP grade (99.7%)                              12.75                                       3.23
+  C3 Membrane / ion-exchange-led purification (no distillation)                              -9.54                                     -21.70
+  D1                        Propylene glycol via hydrogenolysis                             -22.53                                     -34.03
+  E1                        De-methanolised feed-grade glycerin                              -4.19                                     -16.36
+  E2                 De-icer / dust suppressant blend component                              -5.86                                     -18.02
+  E3          Regional aggregation refinery (30,000 t/yr crude)                              15.51                                       6.13
+  F1         Methanol recovery only (return to biodiesel plant)                              -3.71                                     -15.87
 
-Workbook written to /Users/modakarkurma/Documents/CHEME4320/outputs/glycerol_TEA.xlsx
+Workbook written to /Users/modakarkurma/Documents/SENIOR_Sem1/CHEME4320/outputs/glycerol_TEA.xlsx
